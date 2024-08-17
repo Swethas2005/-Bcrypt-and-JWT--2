@@ -1,55 +1,61 @@
 // packages
-let jwt = require("jsonwebtoken")
+let jwt = require("jsonwebtoken");
 
 // local imports 
-let JWT_SECRET_KEY = process.env.JWT_SECRET_KEY
+let JWT_SECRET_KEY = process.env.JWT_SECRET_KEY;
+let blacklistedToken = require("../models/blacklisted");
 
 // Authentication 
 
-async function authenticate(req,res,next){
+async function authenticate(req, res, next) {
     try {
-        let authHeader = req.headers.authorization
+        let authHeader = req.headers.authorization;
 
-        if(!authHeader){
-            return res.status(401).send("Authorization missing the headers")
+        if (!authHeader) {
+            return res.status(401).send("Authorization header missing");
         }
 
-        let token = authHeader.token.split(" ")[1]
+        let token = authHeader.split(" ")[1]; // Fixed the issue here
 
-        if(!token){
-            return res.status(401).send("Token not found")
+        if (!token) {
+            return res.status(401).send("Token not found");
         }
 
-        // verifying the token
-        jwt.verify(token,JWT_SECRET_KEY , function(err, decoded) {
+        let isBlacklisted = await blacklistedToken.findOne({ token: token });
+        if (isBlacklisted) {
+            return res.status(401).send("user logged out . Please login again.");
+        }
+
+        // Verifying the token
+        jwt.verify(token, JWT_SECRET_KEY, function(err, decoded) {
             if (err) {
-             return res.status(401).send("user not authenticated, please login")
+                return res.status(401).send("User not authenticated, please login");
             }
-            if(decoded){
-                req.body.role = decoded.role
+            if (decoded) {
+                req.body.role = decoded.role;
                 next();
             }
-          });
+        });
 
     } catch (error) {
-        console.log(error)
-        res.status(401).send("internal server error ")
+        console.log(error);
+        res.status(500).send("Internal server error");
     }
 }
 
 // Authorization
-async function authorize(permittedRoles){
-    return function (req,res,next){
+async function authorize(permittedRoles) {
+    return function (req, res, next) {
         try {
-           if(permittedRoles.includes(req.body.role)){
-              next()
-           }else{
-            return res.status(401).send({message: "User doesn't have permission to see the route"})
-           }
+            if (permittedRoles.includes(req.body.role)) {
+                next();
+            } else {
+                return res.status(401).send({ message: "User doesn't have permission to access this route" });
+            }
         } catch (error) {
-            res.status(401).send("internal server error")
+            res.status(500).send("Internal server error");
         }
     }
 }
 
-module.exports = {authenticate,authorize}
+module.exports = { authenticate, authorize };

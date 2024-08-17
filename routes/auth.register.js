@@ -5,6 +5,7 @@ let jwt = require("jsonwebtoken")
 // local imports 
 let UserModel = require("../models/user.js")
 let JWT_SECRET_KEY = process.env.JWT_SECRET_KEY
+let blacklistedToken = require("../models/blacklisted.js")
 
 // parent router for registration and login
 let authRouter = express.Router();
@@ -106,6 +107,31 @@ authRouter.post("/token", async (req, res) => {
         res.status(401).send({message:"Internal server error"})
     }
 });
+
+// logout route
+authRouter.post("/logout",async (req,res)=>{
+    try {
+        let authHeader = req.headers.authorization
+
+        if(!authHeader){
+            return res.status(401).send("Authorization missing the headers")
+        }
+
+        let token = authHeader.token.split(" ")[1]
+
+        if(!token){
+            return res.status(401).send("Token not found")
+        }
+
+        let blacklistedToken = new blacklistedToken.find();
+
+        await blacklistedToken.save()
+        res.status.send({message:"user logged out successfully "});
+    } catch (error) {
+        console.log(error);
+        res.status(401).send({message:"Internal server error"})
+    }
+})
 
 
 
