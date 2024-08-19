@@ -19,7 +19,7 @@ bookRouter.get("/getBook", async (req, res) => {
 });
 
 // post request to add the books
-bookRouter.post("/addBook",  authenticate([librarian, members]), async (req, res) => {
+bookRouter.post("/addBook",  authenticate(["creator"]), async (req, res) => {
     try {
         let { author, title, publishedDate, genre, pages } = req.body;
 
